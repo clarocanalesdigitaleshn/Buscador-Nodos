@@ -582,6 +582,97 @@
       }).join('');
     }
 
+
+    // ==========================================
+    // MODULO DE ASISTENTE QFLOW (5 NIVELES)
+    // ==========================================
+    let currentQflowMercado = 'ALL';
+
+    function stripAccents(str) {
+      if (!str) return '';
+      return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
+    function setQflowMercado(mercado, btn) {
+      currentQflowMercado = mercado;
+      const pillsContainer = document.getElementById('qflowMercadoPills');
+      if (pillsContainer) {
+        pillsContainer.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+      }
+      if (btn) btn.classList.add('active');
+      filterQflow();
+    }
+
+    function filterQflow() {
+      if (typeof QFLOW === 'undefined') {
+        console.error('QFLOW no está definido');
+        return;
+      }
+
+      const qInput = document.getElementById('qflowSearchInput');
+      const q = qInput ? stripAccents(qInput.value.trim()) : '';
+      const container = document.getElementById('qflowContainer');
+      const counter = document.getElementById('qflowResultsCount');
+      if (!container || !counter) return;
+
+      const tokens = q.split(/\s+/).filter(t => t.length > 0);
+
+      const filtered = QFLOW.filter(row => {
+        if (currentQflowMercado !== 'ALL' && row.mercado !== currentQflowMercado) return false;
+        if (tokens.length === 0) return true;
+
+        const fullStr = stripAccents(`${row.mercado} ${row.nivel2} ${row.nivel3} ${row.nivel4} ${row.resolucion}`);
+        return tokens.every(token => fullStr.includes(token));
+      });
+
+      if (tokens.length === 0 && currentQflowMercado === 'ALL') {
+        counter.innerText = `Mostrando las primeras 40 de 2,371 combinaciones oficiales en QFlow (escriba arriba para filtrar)...`;
+      } else {
+        const mercadoLabel = currentQflowMercado === 'ALL' ? 'Todos los Mercados' : currentQflowMercado;
+        counter.innerText = `Encontradas ${filtered.length} combinaciones oficiales en QFlow (${mercadoLabel})`;
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:3rem; background:white; border-radius:10px; border:1px dashed #cbd5e1; color:#64748b;">
+            <span style="font-size:2rem; display:block; margin-bottom:0.5rem;">⚠️</span>
+            <b>No se encontraron tipificaciones</b> para la búsqueda ingresada.
+            <p style="font-size:0.85rem; margin-top:0.4rem;">Prueba con palabras como <i>modem, no navega, esim, averia, factura, open wf, cobro</i>.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const display = filtered.slice(0, 60);
+
+      container.innerHTML = display.map(r => {
+        const fullPath = `${r.mercado} | ${r.nivel2} | ${r.nivel3} | ${r.nivel4} | ${r.resolucion}`;
+        const copySafe = encodeURIComponent(fullPath);
+        const copyTip = encodeURIComponent(r.nivel4);
+
+        return `
+          <div class="qflow-row">
+            <div class="qflow-path">
+              <span class="qflow-step mercado">${r.mercado}</span>
+              <span class="arrow-sep">›</span>
+              <span class="qflow-step">${r.nivel2}</span>
+              <span class="arrow-sep">›</span>
+              <span class="qflow-step">${r.nivel3}</span>
+              <span class="arrow-sep">›</span>
+              <span class="qflow-step" style="background:#fef3c7; color:#92400e; font-weight:700;">${r.nivel4}</span>
+              <span class="arrow-sep">➔</span>
+              <span class="qflow-step res">${r.resolucion}</span>
+            </div>
+            <div style="display:flex; gap:0.4rem; align-items:center;">
+              <button class="copy-btn" onclick="copyText(this, decodeURIComponent('${copySafe}'))" title="Copiar toda la jerarquía de 5 niveles">
+                📋 Copiar Ruta
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
