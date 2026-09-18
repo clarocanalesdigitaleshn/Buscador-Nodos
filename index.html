@@ -318,7 +318,7 @@
         <div class="search-row">
           <div class="search-input-wrapper">
             <span class="search-icon">🔍</span>
-            <input type="text" id="nodeSearchInput" class="search-input" placeholder="Buscar colonia, barrio, nodo o municipio... (ej: Las Colinas, San Carlos, Miraflores)" oninput="filterNodos()">
+            <input type="text" id="nodeSearchInput" class="search-input" placeholder="Buscar por colonia, código de nodo o Intrasac (ej: ROB29, Altamira 05, Las Colinas, SCA11)..." oninput="filterNodos()">
           </div>
           <div class="filter-pills">
             <button class="pill-btn active" onclick="setTecFilter('ALL', this)">Todas (1,493)</button>
@@ -453,6 +453,7 @@
     }
 
 
+    let currentTecFilter = 'ALL';
     let currentDialogSegment = 'ALL';
     let currentDialogCat = 'ALL';
     let activeVariants = {}; // Guarda la variante seleccionada por script ID: { 'W-WEL-01': 0 }
@@ -768,6 +769,39 @@
       }
     }
 
+
+    // ==========================================
+    // TELEMETRIA DE AUDITORIA (GOOGLE SHEETS WEBHOOK)
+    // ==========================================
+    const TELEMETRY_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwNJQN3F19g6lzgJrhLby30e0tJ3eoYqoz-_dmYV7AEBad_NU4wAsPZeFe9SZtM5Dp0jQ/exec";
+
+    function logUserAccess(userName, userEmail, authMethod) {
+      if (!TELEMETRY_WEBHOOK_URL || TELEMETRY_WEBHOOK_URL.includes("URL_GOOGLE_APPS_SCRIPT_AQUI")) {
+        console.log("Telemetry: Webhook URL pendiente de configurar.");
+        return;
+      }
+
+      try {
+        const payload = {
+          fechaHora: new Date().toLocaleString("es-HN", { timeZone: "America/Tegucigalpa" }),
+          nombre: userName || "Desconocido",
+          correo: userEmail || "N/D",
+          metodo: authMethod || "Genesys Cloud SSO",
+          url: window.location.href,
+          navegador: navigator.userAgent
+        };
+
+        fetch(TELEMETRY_WEBHOOK_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(e => console.warn("Log ping error:", e));
+      } catch (e) {
+        console.warn("Telemetry error:", e);
+      }
+    }
+
     async function verifyGenesysToken(token) {
       try {
         const response = await fetch(`https://api.${GENESYS_ENV}/api/v2/users/me`, {
@@ -795,6 +829,7 @@
         sessionStorage.setItem("genesys_auth_token", token);
         sessionStorage.setItem("genesys_auth_user", userName);
         sessionStorage.setItem("genesys_auth_email", userEmail);
+        logUserAccess(userName, userEmail, "Genesys Cloud SSO");
 
         // Limpiar hash de la URL para que no quede expuesto el token
         history.replaceState(null, null, window.location.pathname);
@@ -823,6 +858,7 @@
       if (EMERGENCY_KEYS.includes(pin)) {
         sessionStorage.setItem("genesys_auth_user", "Supervisor");
         sessionStorage.setItem("genesys_auth_email", "admin@claro.com.hn");
+        logUserAccess("Supervisor / Contingencia", "admin@claro.com.hn", "Clave Operativa PIN");
         document.getElementById("authOverlay").style.display = "none";
         const userBadge = document.getElementById("userHeaderBadge");
         userBadge.style.display = "flex";
