@@ -130,7 +130,8 @@
     .personalize-input:focus { border-color: #2563eb; }
 
     /* Dialogues styling */
-    .dialogo-card { background: white; border-radius: 10px; border: 1px solid var(--border-color); padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .dialogo-card { background: white; border-radius: 10px; border: 1px solid var(--border-color); padding: 1.1rem; display: flex; flex-direction: column; justify-content: flex-start; gap: 0.65rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .dialogo-card > div:first-child { margin-bottom: 0.15rem; }
     .dialogo-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
     .dialogo-cat { font-size: 0.72rem; font-weight: 800; color: var(--claro-red); text-transform: uppercase; letter-spacing: 0.4px; }
     .dialogo-titulo { font-size: 0.98rem; font-weight: 800; color: var(--text-main); margin-top: 2px; }
@@ -362,17 +363,26 @@
     <!-- TAB 4: GUIONES Y SCRIPTS OFICIALES (204) -->
     <section id="tab-dialogos" class="tab-pane">
       <div class="personalize-bar">
-        <div>
-          <label>👤 Nombre del Cliente:</label>
-          <input type="text" id="clientNameInput" class="personalize-input" placeholder="ej: Sr. Martínez" value="estimado cliente" oninput="renderDialogos()">
+        <div style="flex: 1; min-width: 220px;">
+          <label style="display:flex; justify-content:space-between; align-items:center;">
+            <span>👤 Nombre del Cliente:</span>
+            <span style="font-size:0.7rem; color:#dc2626; font-weight:800;">* Requerido</span>
+          </label>
+          <input type="text" id="clientNameInput" class="personalize-input" style="width:100%; margin-top:0.25rem;" placeholder="Escribe el nombre del cliente..." value="" oninput="handlePersonalizeInput()">
         </div>
-        <div>
-          <label>💼 Tu Nombre (Analista):</label>
-          <input type="text" id="agentNameInput" class="personalize-input" placeholder="ej: Brayan" value="su asesor" oninput="renderDialogos()">
+        <div style="flex: 1; min-width: 220px;">
+          <label style="display:flex; justify-content:space-between; align-items:center;">
+            <span>💼 Tu Nombre (Agente):</span>
+            <span style="font-size:0.7rem; color:#dc2626; font-weight:800;">* Requerido</span>
+          </label>
+          <input type="text" id="agentNameInput" class="personalize-input" style="width:100%; margin-top:0.25rem;" placeholder="Escribe tu nombre de agente..." value="" oninput="handlePersonalizeInput()">
         </div>
-        <div>
+        <div style="flex: 0.8; min-width: 180px;">
           <label>🎫 No. Caso / Ticket:</label>
-          <input type="text" id="ticketInput" class="personalize-input" placeholder="ej: 47123456" value="47123456" oninput="renderDialogos()">
+          <input type="text" id="ticketInput" class="personalize-input" style="width:100%; margin-top:0.25rem;" placeholder="ej: 47123456" value="47123456" oninput="renderDialogos()">
+        </div>
+        <div id="personalizeNotice" style="width: 100%; font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.85rem; border-radius: 6px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
+          ⚠️ Para copiar cualquier guión, debes completar el Nombre del Cliente y tu Nombre (Agente) arriba.
         </div>
       </div>
 
@@ -465,9 +475,62 @@
       return seg;
     }
 
+    function handlePersonalizeInput() {
+      const clientInput = document.getElementById('clientNameInput');
+      const agentInput = document.getElementById('agentNameInput');
+      const notice = document.getElementById('personalizeNotice');
+
+      const clientVal = clientInput ? clientInput.value.trim() : '';
+      const agentVal = agentInput ? agentInput.value.trim() : '';
+
+      if (clientInput && clientVal) {
+        clientInput.style.borderColor = '#93c5fd';
+        clientInput.style.boxShadow = 'none';
+      }
+      if (agentInput && agentVal) {
+        agentInput.style.borderColor = '#93c5fd';
+        agentInput.style.boxShadow = 'none';
+      }
+
+      if (notice) {
+        if (!clientVal && !agentVal) {
+          notice.style.background = '#fef2f2';
+          notice.style.borderColor = '#fecaca';
+          notice.style.color = '#b91c1c';
+          notice.innerHTML = '⚠️ Para copiar cualquier guión, debes completar el <b>Nombre del Cliente</b> y tu <b>Nombre (Agente)</b> arriba.';
+        } else if (!clientVal) {
+          notice.style.background = '#fef2f2';
+          notice.style.borderColor = '#fecaca';
+          notice.style.color = '#b91c1c';
+          notice.innerHTML = '⚠️ Falta ingresar el <b>Nombre del Cliente</b> arriba para habilitar el copiado.';
+        } else if (!agentVal) {
+          notice.style.background = '#fef2f2';
+          notice.style.borderColor = '#fecaca';
+          notice.style.color = '#b91c1c';
+          notice.innerHTML = '⚠️ Falta ingresar tu <b>Nombre (Agente)</b> arriba para habilitar el copiado.';
+        } else {
+          notice.style.background = '#ecfdf5';
+          notice.style.borderColor = '#a7f3d0';
+          notice.style.color = '#065f46';
+          notice.innerHTML = '✓ ¡Listo! El nombre del cliente y tu nombre de agente están configurados. Ya puedes copiar cualquier guión.';
+        }
+      }
+
+      renderDialogos();
+    }
+
     function initDialogCats() {
       if (typeof SCRIPTS === 'undefined') return;
       
+      // Auto-completar nombre del agente si ya inició sesión con Genesys
+      const agentInput = document.getElementById('agentNameInput');
+      if (agentInput && !agentInput.value.trim()) {
+        const savedAgent = sessionStorage.getItem('genesys_auth_user');
+        if (savedAgent && savedAgent !== 'Supervisor' && savedAgent !== 'Analista Genesys') {
+          agentInput.value = savedAgent;
+        }
+      }
+
       const filteredForCats = SCRIPTS.filter(s => currentDialogSegment === 'ALL' || s.segmento === currentDialogSegment);
       const cats = ['ALL', ...new Set(filteredForCats.map(d => d.categoria))];
       const catContainer = document.getElementById('dialogCatPills');
@@ -478,6 +541,8 @@
           ${c === 'ALL' ? 'Todas' : c}
         </button>
       `).join('');
+
+      handlePersonalizeInput();
     }
 
     function setDialogSegment(seg, btn) {
@@ -505,18 +570,80 @@
       renderDialogos();
     }
 
+    function copyScriptGuion(btn, scriptId) {
+      const clientInput = document.getElementById('clientNameInput');
+      const agentInput = document.getElementById('agentNameInput');
+      const clientName = clientInput ? clientInput.value.trim() : '';
+      const agentName = agentInput ? agentInput.value.trim() : '';
+      const ticketVal = document.getElementById('ticketInput') ? (document.getElementById('ticketInput').value.trim() || '') : '';
+
+      let missing = [];
+      if (!clientName) missing.push("Nombre del Cliente");
+      if (!agentName) missing.push("Nombre del Agente");
+
+      if (missing.length > 0) {
+        if (!clientName && clientInput) {
+          clientInput.style.borderColor = '#dc2626';
+          clientInput.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.25)';
+          clientInput.focus();
+        }
+        if (!agentName && agentInput) {
+          agentInput.style.borderColor = '#dc2626';
+          agentInput.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.25)';
+          if (clientName) agentInput.focus();
+        }
+
+        const origText = btn.innerHTML;
+        btn.classList.add('copied');
+        btn.style.background = '#dc2626';
+        btn.style.borderColor = '#dc2626';
+        btn.innerHTML = '⚠️ ¡Falta ' + missing[0] + '!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.style.background = '';
+          btn.style.borderColor = '';
+          btn.innerHTML = origText;
+        }, 2000);
+        return;
+      }
+
+      // Buscar el script y su variante seleccionada
+      const scriptObj = SCRIPTS.find(s => s.id === scriptId);
+      if (!scriptObj) return;
+
+      const selectedIdx = activeVariants[scriptId] !== undefined ? activeVariants[scriptId] : 0;
+      const rawText = scriptObj.variantes[selectedIdx] || scriptObj.texto;
+
+      const processedText = rawText
+        .replace(/\{cliente\}/gi, clientName)
+        .replace(/\{agente\}/gi, agentName)
+        .replace(/\{caso\}/gi, ticketVal)
+        .replace(/\{ticket\}/gi, ticketVal)
+        .replace(/\{\{cliente\}\}/gi, clientName)
+        .replace(/\{\{agente\}\}/gi, agentName);
+
+      copyText(btn, processedText);
+    }
+
     function renderDialogos() {
       if (typeof SCRIPTS === 'undefined') return;
       const qInput = document.getElementById('dialogSearchInput');
       if (!qInput) return;
       const q = qInput.value.toLowerCase().trim();
 
-      const clientName = document.getElementById('clientNameInput').value.trim() || 'estimado cliente';
-      const agentName = document.getElementById('agentNameInput').value.trim() || 'su asesor';
+      const clientInput = document.getElementById('clientNameInput');
+      const agentInput = document.getElementById('agentNameInput');
+      const clientName = clientInput ? clientInput.value.trim() : '';
+      const agentName = agentInput ? agentInput.value.trim() : '';
       const ticketVal = document.getElementById('ticketInput') ? (document.getElementById('ticketInput').value.trim() || '47XXXXXX') : '47XXXXXX';
+
+      // Textos para visualización (si están vacíos, se resalta en ámbar la variable)
+      const clientDisplay = clientName ? clientName : '<span style="color:#d97706; font-weight:800; background:#fef3c7; padding:1px 5px; border-radius:4px; border:1px dashed #f59e0b;">[Nombre del Cliente]</span>';
+      const agentDisplay = agentName ? agentName : '<span style="color:#d97706; font-weight:800; background:#fef3c7; padding:1px 5px; border-radius:4px; border:1px dashed #f59e0b;">[Nombre Agente]</span>';
 
       const container = document.getElementById('dialogosContainer');
       const counter = document.getElementById('dialogResultsCount');
+      if (!container || !counter) return;
 
       const filtered = SCRIPTS.filter(s => {
         if (currentDialogSegment !== 'ALL' && s.segmento !== currentDialogSegment) return false;
@@ -537,15 +664,13 @@
         const selectedIdx = activeVariants[s.id] !== undefined ? activeVariants[s.id] : 0;
         const rawText = s.variantes[selectedIdx] || s.texto;
 
-        const textProcessed = rawText
-          .replace(/\{cliente\}/gi, clientName)
-          .replace(/\{agente\}/gi, agentName)
+        const textPreview = rawText
+          .replace(/\{cliente\}/gi, clientDisplay)
+          .replace(/\{agente\}/gi, agentDisplay)
           .replace(/\{caso\}/gi, ticketVal)
           .replace(/\{ticket\}/gi, ticketVal)
-          .replace(/\{\{cliente\}\}/gi, clientName)
-          .replace(/\{\{agente\}\}/gi, agentName);
-
-        const textForCopy = encodeURIComponent(textProcessed);
+          .replace(/\{\{cliente\}\}/gi, clientDisplay)
+          .replace(/\{\{agente\}\}/gi, agentDisplay);
 
         // Selector de variantes si tiene más de 1
         let variantBtnsHtml = '';
@@ -570,18 +695,17 @@
                   <span class="tag-tec ${s.segmento === 'wa-masivo' ? 'tag-gpon' : (s.segmento === 'rs-masivo' ? 'tag-hfc' : '')}" style="background:#fee2e2; color:#991b1b; font-size:0.7rem;">${getSegmentLabel(s.segmento)}</span>
                   <span class="dialogo-cat" style="margin-left:0.3rem;">${s.categoria} • <b style="color:var(--text-main);">${s.id}</b></span>
                 </div>
-                <button class="copy-btn" onclick="copyText(this, decodeURIComponent('${textForCopy}'))">📋 Copiar Guión</button>
+                <button class="copy-btn" onclick="copyScriptGuion(this, '${s.id}')">📋 Copiar Guión</button>
               </div>
               <div class="dialogo-titulo">${s.escenario}</div>
               ${variantBtnsHtml}
             </div>
-            <div class="dialogo-text-box">${textProcessed}</div>
+            <div class="dialogo-text-box">${textPreview}</div>
             ${s.observacion ? `<div style="font-size:0.72rem; color:#94a3b8; font-style:italic;">💡 ${s.observacion}</div>` : ''}
           </div>
         `;
       }).join('');
     }
-
 
     // ==========================================
     // MODULO DE ASISTENTE QFLOW (5 NIVELES)
@@ -694,7 +818,8 @@
 
     function copyText(btn, text) {
       // Si se copia un nodo en pestaña de colonias, guardar colonia activa
-      const qCol = document.getElementById('nodeSearchInput')?.value.trim();
+      const nodeInput = document.getElementById('nodeSearchInput');
+      const qCol = (nodeInput && typeof nodeInput.value === 'string') ? nodeInput.value.trim() : '';
       if (qCol && qCol.length > 2) {
         saveRecentNode(qCol, text, currentTecFilter);
       }
